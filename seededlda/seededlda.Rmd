@@ -1,36 +1,19 @@
 ---
 documentclass: jss
 author:
-  - name: FirstName LastName
-    orcid: 0000-0000-0000-0000
-    affiliation: University/Company
-    # use this syntax to add text on several lines
-    address: |
-      | First line
-      | Second line
-    email: \email{name@company.com}
+  - name: Kohei Watanabe
+    orcid: 0000-0001-6519-5265
+    affiliation: Waseda University
+    email: \email{watanabe.kohei@gmail.com}
     url: https://posit.co
-  - name: Second Author
-    orcid: 0000-0000-0000-0000
-    affiliation: 'Affiliation \AND'
-    # To add another line, use \AND at the end of the previous one as above
-  - name: Third Author
-    orcid: 0000-0000-0000-0000
-    address: |
-      | Department of Statistics and Mathematics,
-      | Faculty of Biosciences,
-      | Universitat Autònoma de Barcelona
-    affiliation: |
-      | Universitat Autònoma 
-      | de Barcelona
     # use a different affiliation in adress field (differently formated here)
     affiliation2: Universitat Autònoma de Barcelona
 title:
-  formatted: "A Capitalized Title: Something about a Package \\pkg{foo}"
+  formatted: "Distributed Asymmetric Allocation of Topics for Large Imbalanced Corpora in \\proglang{R}"
   # If you use tex in the formatted title, also supply version without
-  plain:     "A Capitalized Title: Something about a Package foo"
+  plain: "Distributed Asymmetric Allocation of Topics for Large Imbalanced Corpora in R"
   # For running headers, if needed
-  short:     "\\pkg{foo}: A Capitalized Title"
+  short: "Distributed Asymmetric Allocation"
 abstract: >
   The abstract of the article.
 keywords:
