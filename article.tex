@@ -19,16 +19,15 @@
 %% - \Plainauthor{} without affiliations
 %% - Separate authors by \And or \AND (in \author) or by comma (in \Plainauthor).
 %% - \AND starts a new line, \And does not.
-\author{Achim Zeileis~\orcidlink{0000-0003-0918-3766}\\Universit\"at Innsbruck
-   \And Second Author\\Plus Affiliation}
+\author{Kohei Watanabe~\orcidlink{0000-0001-6519-5265}\\Waseda University}
 \Plainauthor{Achim Zeileis, Second Author}
 
 %% - \title{} in title case
 %% - \Plaintitle{} without LaTeX markup (if any)
 %% - \Shorttitle{} with LaTeX markup (if any), used as running title
-\title{A Short Demo Article: Regression Models for Count Data in \proglang{R}}
-\Plaintitle{A Short Demo Article: Regression Models for Count Data in R}
-\Shorttitle{A Short Demo Article in \proglang{R}}
+\title{Distributed Asymmetric Allocation of Topics for Large Imbalanced Corpora in \proglang{R}}
+\Plaintitle{Distributed Asymmetric Allocation of Topics for Large Imbalanced Corpora in R}
+\Shorttitle{Distributed Asymmetric Allocation in \proglang{R}}
 
 %% - \Abstract{} almost as usual
 \Abstract{
@@ -259,7 +258,7 @@ R> data("quine", package = "MASS")
 \end{CodeChunk}
 %
 and a basic frequency distribution of the response variable is displayed in
-Figure~\ref{fig:quine}.
+Figure~\ref{fig:lda}.
 
 \begin{leftbar}
 For code input and output, the style files provide dedicated environments.
@@ -277,10 +276,16 @@ before and after code input/output should be avoided (see above).
 
 \begin{figure}[t!]
 \centering
-\includegraphics{article-visualization}
-\caption{\label{fig:quine} Frequency distribution for number of days absent
-from school.}
+\includegraphics{figures/lda}
+\caption{\label{fig:lda}
+Graphical model of a simple LDA. Gray circles are variables whose values are known, 
+whereas white circles are latent variables whose values are unknown. $\theta$ and $\phi$ 
+are the $|D| \times K$ and $K \times |V|$ matrices, respectively; $Z$ is a vector to record 
+topics words, $W$, in document $d$; $d$ is one of the documents $d \in D$; $v$ is one of the 
+unique words $v \in V$ in the corpus.
+}
 \end{figure}
+
 
 As a first model for the \code{quine} data, we fit the basic Poisson regression
 model. (Note that JSS prefers when the second line of code is indented by two
