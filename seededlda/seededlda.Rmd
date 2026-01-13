@@ -22,6 +22,9 @@ keywords:
   plain:     [keywords, not capitalized, Java]
 preamble: >
   \usepackage{amsmath}
+header-includes:
+   - \usepackage{algorithm}
+   - \usepackage[noend]{algpseudocode}
 output: rticles::jss_article
 ---
 
@@ -30,6 +33,19 @@ output: rticles::jss_article
 options(prompt = 'R> ', continue = '+ ', fig.align = 'center')
 ```
 
+# Introduction
+
+## Algorithms
+
+To infer the document-topic distribution $\theta$ and the topic-word distribution $\phi$, assigned topics are saved in $M_{dk}$ and $N_{kv}$. The former is the frequency of topic k found in document $d$, the latter is the frequency of topic $k$ assigned to unique word $v$, and $\alpha_k$ and $\beta_k$ are the Dirichlet priors, which are added to the frequency counts to smooth the distributions in $\theta$ and $\phi$.  The Gibbs sampler assigns topics to the words in the corpus based on the sampling distribution, $G$, derived as a product of $\theta$ and $\phi$. These relationships between are defined as follows:
+
+$$
+\begin{split}
+G = P(Z=k|W=v,d)\propto\theta_{dk}\phi_{kv} \\
+\theta_{dk} = P(Z=k|d,\alpha_k) = \frac{M_{dk}+\alpha_k}{M_{d.}+\sum\alpha_k} \\
+\phi_{kv} = P(W=v|k,\beta_k) = \frac{N_{kv}+\beta_k}{N_{k.}+\sum\beta_k}
+\end{split}
+$$
 
 ![
 Graphical model of a simple LDA. Gray circles are variables whose values are known, 
@@ -39,19 +55,25 @@ topics words, $W$, in document $d$; $d$ is one of the documents $d \in D$; $v$ i
 unique words $v \in V$ in the corpus.
 ]("../figures/lda.png")
 
-Can be inserted in regular R markdown blocks.
 
-```{r}
-x <- 1:10
-x
-```
+\makeatletter
+\renewcommand{\ALG@name}{Algorithm}
+\makeatother
+\begin{algorithm}[tb]
+\caption{Pseudo-code for a simple LDA. Gibbs sampling is repeated max\_iter times.}
+\begin{algorithmic}[1]
 
-To infer the document-topic distribution $\theta$ and the topic-word distribution $\phi$, assigned topics are saved in $M_{dk}$ and $N_{kv}$. The former is the frequency of topic k found in document $d$, the latter is the frequency of topic $k$ assigned to unique word $v$, and $α_k$ and $β_k$ are the Dirichlet priors, which are added to the frequency counts to smooth the distributions in $\theta$ and $\phi$.  The Gibbs sampler assigns topics to the words in the corpus based on the sampling distribution, $G$, derived as a product of $\theta$ and $\phi$. These relationships between are defined as follows:
+\Function {max\_in\_array}{$array$}
+    \State $max \gets 0$
+    \ForAll {$element \gets array$}
+        \If {$element > max$}
+            \State $max \gets element$
+        \EndIf
+    \EndFor
+    \State \Return $max$
+\EndFunction
 
-$$
-G = P(Z=k|W=v,d)\propto\theta_{dk}\phi_{kv} \\
-\theta_{dk} = P(Z=k|d,\alpha_k) = \frac{M_{dk}+\alpha_k}{M_{d.}+\sum\alpha_k}	\\
-\phi_{kv} = P(W=v|k,\beta_k) = \frac{N_{kv}+\beta_k}{N_{k.}+\sum\beta_k}
-$$
+\end{algorithmic}
+\end{algorithm}
 
 
