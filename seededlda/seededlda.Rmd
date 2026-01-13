@@ -30,26 +30,6 @@ output: rticles::jss_article
 options(prompt = 'R> ', continue = '+ ', fig.align = 'center')
 ```
 
-# Introduction
-
-This template demonstrates some of the basic LaTeX that you need to know to create a JSS article.
-
-## Code formatting
-
-In general, don't use Markdown, but use the more precise LaTeX commands instead:
-
-* \proglang{Java}
-* \pkg{plyr}
-
-One exception is inline code, which can be written inside a pair of backticks (i.e., using the Markdown syntax).
-
-If you want to use LaTeX commands in headers, you need to provide a `short-title` attribute. You can also provide a custom identifier if necessary. See the header of Section \ref{r-code} for example.
-
-# \proglang{R} code {short-title="R code" #r-code}
-
-$$
-a = x
-$$
 
 ![
 Graphical model of a simple LDA. Gray circles are variables whose values are known, 
@@ -66,7 +46,12 @@ x <- 1:10
 x
 ```
 
-## Features specific to \pkg{rticles} {short-title="Features specific to rticles"}
+To infer the document-topic distribution $\theta$ and the topic-word distribution $\phi$, assigned topics are saved in $M_{dk}$ and $N_{kv}$. The former is the frequency of topic k found in document $d$, the latter is the frequency of topic $k$ assigned to unique word $v$, and $α_k$ and $β_k$ are the Dirichlet priors, which are added to the frequency counts to smooth the distributions in $\theta$ and $\phi$.  The Gibbs sampler assigns topics to the words in the corpus based on the sampling distribution, $G$, derived as a product of $\theta$ and $\phi$. These relationships between are defined as follows:
 
-* Adding short titles to section headers is a feature specific to \pkg{rticles} (implemented via a Pandoc Lua filter). This feature is currently not supported by Pandoc and we will update this template if [it is officially supported in the future](https://github.com/jgm/pandoc/issues/4409).
-* Using the `\AND` syntax in the `author` field to add authors on a new line. This is a specific to the `rticles::jss_article` format.
+$$
+G = P(Z=k|W=v,d)\propto\theta_{dk}\phi_{kv} \\
+\theta_{dk} = P(Z=k|d,\alpha_k) = \frac{M_{dk}+\alpha_k}{M_{d.}+\sum\alpha_k}	\\
+\phi_{kv} = P(W=v|k,\beta_k) = \frac{N_{kv}+\beta_k}{N_{k.}+\sum\beta_k}
+$$
+
+
