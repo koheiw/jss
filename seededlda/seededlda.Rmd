@@ -69,6 +69,19 @@ Pseudo-code for the enhanced LDA with distributed computing. Gibbs sampling is r
 \input{algorithm2.tex}
 \end{algorithm}
 
+\begin{algorithm}
+\caption{
+Pseudo-code for the enhanced LDA with parallel computing and Dirichlet prior adjustment. Adjusted $\alpha_k$ serves as Dirichlet priors in the next iteration, $i+1$.
+}
+\input{algorithm3.tex}
+\end{algorithm}
 
+
+\begin{algorithm}
+\caption{
+Pseudo-code for DAA. It enhances LDA by adding parallel computing, Dirichlet prior adjustment, and convergence detection. Convergence is checked after each sub-iteration by comparing the value of $\delta_i$ and $\delta_{i-1}$.
+}
+\input{algorithm4.tex}
+\end{algorithm}
 
 

@@ -1,0 +1,26 @@
+\begin{algorithmic}
+
+\algdef{SE}[SUBALG]{Indent}{EndIndent}{}{\algorithmicend\ }%
+\algtext*{Indent}
+\algtext*{EndIndent}
+
+\State \textbf{initialize} randomly assign topics to $Z$
+\State 	compute constant for Dirichlet adjustment: $\varepsilon_k \gets adjust\_alpha \times\ \alpha/M_{.k}$ 
+\For {$i \gets 1$ to $max\_iter/10$}
+  \State	assign $D \times batch\_size$ documents to processor $e$
+  \State \textbf{parallel\_for} {$j \gets 1$ to $10$} \textbf{do}
+  \Indent
+    \State sample topic for words: $z_i \gets G(N_{kv}, M_{dk}, \alpha_k, \beta_k)$
+    \If {$i == 10$}
+  		  count topic changes: ${\acute{\delta}}^e \gets |z_j\neq z_{j-1}|$
+  		\EndIf
+    \State \Return ${\acute{N}}_{kv}^e, {\acute{\delta}}^e$ 
+  \EndIndent
+  \State synchronize topic-word count: $N_{kv} \gets N_{kv}+{\acute{N}}_{kv}^1+{\acute{N}}_{kv}^2+\cdots{\acute{N}}_{kv}^e$
+  \State 	adjust Dirchlet prior: $\alpha_k \gets \alpha_k + \varepsilon_k ({\acute{N}}_{k.}^1 + {\acute{N}}_{k.}^2 + \cdots{\acute{N}}_{k.}^e)$
+  \State 	aggregate topic changes: $\delta_i \gets {\acute{\delta}}^1+{\acute{\delta}}^2\cdots{\acute{\delta}}^e$
+	 \If {$\delta_i \le \delta_{i-1}$}
+		  \State \textbf{exit}
+		\EndIf
+\EndFor
+\end{algorithmic}
