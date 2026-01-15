@@ -56,47 +56,17 @@ unique words $v \in V$ in the corpus.
 ]("../figures/lda.png")
 
 
-\makeatletter
-\renewcommand{\ALG@name}{Algorithm}
-\makeatother
 \begin{algorithm}
 \caption{Pseudo-code for a simple LDA. Gibbs sampling is repeated max\_iter times.}
-\begin{algorithmic}
-
-\State \textbf{initialize} randomly assign topics to $Z$
-\For {$i \gets 1$ to $max\_iter$}
-  \State sample topic for words: $z_i \gets G(N_{kv}, M_{dk}, \alpha_k, \beta_k)$
-\EndFor
-
-\end{algorithmic}
+\input{algorithm1.tex}
 \end{algorithm}
 
--------------------
 
-\makeatletter
-\renewcommand{\ALG@name}{Algorithm}
-\makeatother
 \begin{algorithm}
 \caption{
 Pseudo-code for the enhanced LDA with distributed computing. Gibbs sampling is repeated max\_iter times in separate processors over $D \times batch\_size$ documents; $D$ is the total number of documents in the corpus.
 }
-\begin{algorithmic}
-
-\algdef{SE}[SUBALG]{Indent}{EndIndent}{}{\algorithmicend\ }%
-\algtext*{Indent}
-\algtext*{EndIndent}
-
-\State \textbf{initialize} randomly assign topics to $Z$
-\For {$i \gets 1$ to $max\_iter/10$}
-  \State	assign $D \times batch\_size$ documents to processor $e$
-  \State \textbf{parallel\_for} {$j \gets 1$ to $10$} \textbf{do}
-  \Indent
-    \State sample topic for words: $z_i \gets G(N_{kv}, M_{dk}, \alpha_k, \beta_k)$
-    \State \Return ${\acute{N}}_{kv}^e$ 
-  \EndIndent
-  \State synchronize topic-word count: $N_{kv} \gets N_{kv}+{\acute{N}}_{kv}^1+{\acute{N}}_{kv}^2+\cdots{\acute{N}}_{kv}^e$
-\EndFor
-\end{algorithmic}
+\input{algorithm2.tex}
 \end{algorithm}
 
 
