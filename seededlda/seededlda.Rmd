@@ -5,7 +5,7 @@ author:
     orcid: 0000-0001-6519-5265
     affiliation: Waseda University
     email: \email{watanabe.kohei@gmail.com}
-    url: https://koheiw.net
+    url: https://github.com/koheiw/seededlda
 title:
   formatted: "Distributed Asymmetric Allocation of Topics for Large Imbalanced Corpora in \\proglang{R}"
   # If you use tex in the formatted title, also supply version without
@@ -61,6 +61,21 @@ unique words $v \in V$ in the corpus.
 \input{algorithm1.tex}
 \end{algorithm}
 
+## Seeded LDA
+
+$$
+{\phi}_{kv}=\frac{N_{kv}+\ \beta+\omega_{kv}}{N_{.v}+\beta\left|V\right|}
+$$
+
+$$
+\omega_{kv}=100\mu\frac{f_v}{\sum f}
+$$
+
+## Sequential LDA
+
+$$
+P\left(Z=k\middle| W=v,\ d\right)\propto\theta_{dk}\theta_{\left(d-1\right)k}^\gamma\phi_{kv}\
+$$
 
 \begin{algorithm}
 \caption{
