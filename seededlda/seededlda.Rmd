@@ -1,9 +1,12 @@
 ---
 documentclass: jss
+bibliography: refs.bib
 author:
   - name: Kohei Watanabe
     orcid: 0000-0001-6519-5265
     affiliation: Waseda University
+    address: |
+      | 1-104 Totsukamachi, Shinjuku-ku, Tokyo, 169-8050, Japan
     email: \email{watanabe.kohei@gmail.com}
     url: https://github.com/koheiw/seededlda
 title:
@@ -33,7 +36,7 @@ options(prompt = 'R> ', continue = '+ ', fig.align = 'center')
 
 # Introduction
 
-## Algorithms
+# Algorithms
 
 To infer the document-topic distribution $\theta$ and the topic-word distribution $\phi$, assigned topics are saved in $M_{dk}$ and $N_{kv}$. The former is the frequency of topic k found in document $d$, the latter is the frequency of topic $k$ assigned to unique word $v$, and $\alpha_k$ and $\beta_k$ are the Dirichlet priors, which are added to the frequency counts to smooth the distributions in $\theta$ and $\phi$.  The Gibbs sampler assigns topics to the words in the corpus based on the sampling distribution, $G$, derived as a product of $\theta$ and $\phi$. These relationships between are defined as follows:
 
@@ -53,7 +56,7 @@ whereas white circles are latent variables whose values are unknown. $\theta$ an
 are the $|D| \times K$ and $K \times |V|$ matrices, respectively; $Z$ is a vector to record 
 topics words, $W$, in document $d$; $d$ is one of the documents $d \in D$; $v$ is one of the 
 unique words $v \in V$ in the corpus.
-]("../figures/lda.png")
+]("lda.png")
 
 
 \begin{algorithm}
@@ -62,6 +65,8 @@ unique words $v \in V$ in the corpus.
 \end{algorithm}
 
 ## Seeded LDA
+
+@watanabe_theory-driven_2022
 
 $$
 {\phi}_{kv}=\frac{N_{kv}+\ \beta+\omega_{kv}}{N_{.v}+\beta\left|V\right|}
@@ -73,9 +78,13 @@ $$
 
 ## Sequential LDA
 
+@watanabe_seeded_2023
+
 $$
 P\left(Z=k\middle| W=v,\ d\right)\propto\theta_{dk}\theta_{\left(d-1\right)k}^\gamma\phi_{kv}\
 $$
+
+## Distributed LDA
 
 \begin{algorithm}
 \caption{
@@ -91,6 +100,7 @@ Pseudo-code for the enhanced LDA with parallel computing and Dirichlet prior adj
 \input{algorithm3.tex}
 \end{algorithm}
 
+## Distributed Asymmetric LDA
 
 \begin{algorithm}
 \caption{
@@ -98,5 +108,4 @@ Pseudo-code for DAA. It enhances LDA by adding parallel computing, Dirichlet pri
 }
 \input{algorithm4.tex}
 \end{algorithm}
-
 
