@@ -38,6 +38,8 @@ options(prompt = 'R> ', continue = '+ ', fig.align = 'center')
 
 # Algorithms
 
+## Basic LDA
+
 To infer the document-topic distribution $\theta$ and the topic-word distribution $\phi$, assigned topics are saved in $M_{dk}$ and $N_{kv}$. The former is the frequency of topic k found in document $d$, the latter is the frequency of topic $k$ assigned to unique word $v$, and $\alpha_k$ and $\beta_k$ are the Dirichlet priors, which are added to the frequency counts to smooth the distributions in $\theta$ and $\phi$.  The Gibbs sampler assigns topics to the words in the corpus based on the sampling distribution, $G$, derived as a product of $\theta$ and $\phi$. These relationships between are defined as follows:
 
 $$
