@@ -25,6 +25,7 @@ preamble: >
   \usepackage{amsmath}
 header-includes:
    - \usepackage{algorithm}
+   - \usepackage{caption}
    - \usepackage[noend]{algpseudocode}
 output: rticles::jss_article
 ---
@@ -52,19 +53,39 @@ $$
 \phi_{kv} = P(W=v|k,\beta_k) = \frac{N_{kv}+\beta_k}{N_{k.}+\sum\beta_k}
 $$
 
-![
-Graphical model of a simple LDA. Gray circles are variables whose values are known, 
-whereas white circles are latent variables whose values are unknown. $\theta$ and $\phi$ 
-are the $|D| \times K$ and $K \times |V|$ matrices, respectively; $Z$ is a vector to record 
-topics words, $W$, in document $d$; $d$ is one of the documents $d \in D$; $v$ is one of the 
-unique words $v \in V$ in the corpus.
-]("lda.png")
-
+\includegraphics[width=5]{lda.png}
+\caption{Graphical model of a simple LDA. Gray circles are variables whose values are known, whereas white circles are latent variables whose values are unknown. $\theta$ and $\phi$ are the $|D| \times K$ and $K \times |V|$ matrices, respectively; $Z$ is a vector to record topics words, $W$, in document $d$; $d$ is one of the documents $d \in D$; $v$ is one of the unique words $v \in V$ in the corpus.}
 
 \begin{algorithm}
 \caption{Pseudo-code for a simple LDA. Gibbs sampling is repeated max\_iter times.}
 \input{algorithm1.tex}
 \end{algorithm}
+
+```{r}
+require(quanteda)
+require(seededlda)
+#setwd("C:/Users/watan/Dropbox/LDA2") # to delete
+
+dict <- dictionary(file = "C:/Users/watan/Dropbox/LDA2/seedwords_glob.yml", levels = 2)
+
+corp <- readRDS("C:/Users/watan/Dropbox/LDA2/data/corpus.RDS") |>
+ corpus_subset(year >= 1991)
+
+toks <- tokens(corp, concatenator = " ") |>
+ tokens_remove("^[\\p{N}\\p{P}]+$", valuetype = "regex", padding = TRUE) %>% 
+ tokens_remove(stopwords("en"),  min_nchar = 2, padding = TRUE)
+
+dfmt <- dfm(toks, remove_padding = TRUE) %>% 
+ dfm_trim(min_termfreq = 10)
+
+dfmt0 <- dfm_sample(dfmt, 10000) 
+```
+
+
+```{r}
+lda1 <- textmodel_lda(dfmt0, k = 6, max_iter = 1000, verbose = TRUE)
+terms(lda1)
+```
 
 ## Seeded LDA
 
@@ -77,6 +98,13 @@ $$
 $$
 \omega_{kv}=100\mu\frac{f_v}{\sum f}
 $$
+
+
+```{r, eval=FALSE}
+dict
+lda2 <- textmodel_seededlda(dfmt0, dict, max_iter = 1000, verbose = TRUE)
+terms(lda2)
+```
 
 ## Sequential LDA
 
