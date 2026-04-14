@@ -10,17 +10,17 @@ author:
     email: \email{watanabe.kohei@gmail.com}
     url: https://github.com/koheiw/seededlda
 title:
-  formatted: "Distributed Asymmetric Allocation of Topics for Large Imbalanced Corpora in \\proglang{R}"
   # If you use tex in the formatted title, also supply version without
-  plain: "Distributed Asymmetric Allocation of Topics for Large Imbalanced Corpora in R"
   # For running headers, if needed
-  short: "Distributed Asymmetric Allocation"
+  formatted: "seededlda: An \\proglang{R} package for semisupervised topic analysis of large corpora"
+  plain: "seededlda: An R package for semisupervised topic analysis of large corpora"
+  short: "seededlda"
 abstract: >
   The abstract of the article.
 keywords:
   # at least one keyword must be supplied
-  formatted: [keywords, not capitalized, "\\proglang{Java}"]
-  plain:     [keywords, not capitalized, Java]
+  formatted: [LDA, topic models, content analysis, "\\proglang{R}"]
+  plain:     [LDA, topic models, content analysis, R]
 preamble: >
   \usepackage{amsmath}
 header-includes:
@@ -28,14 +28,27 @@ header-includes:
    - \usepackage{caption}
    - \usepackage[noend]{algpseudocode}
 output: rticles::jss_article
+editor_options: 
+  chunk_output_type: console
 ---
 
 ```{r, setup, include=FALSE}
-# NOTE: run rmarkdown::render("seededlda/seededlda.Rmd") in WSL to generate PDF
-options(prompt = 'R> ', continue = '+ ', fig.align = 'center')
+# NOTE: run rmarkdown::render("seededlda/seededlda.Rmd") to generate PDF
+options(prompt = 'R> ', continue = '+ ', fig.align = 'center', cache = TRUE)
 ```
 
 # Introduction
+
+Scholars have long been analyzing topics or themes of documents to understand important issues. As large textual data became more accessible, thanks to online news, social media, and digital archives, many found topic models very useful because their unsupervised algorithms allow users to identify topics in large corpora without much human involvement. Among various topic models, latent Dirichlet allocation (LDA) (@blei_latent_2003) has been arguably the most popular topic model in applied research. 
+
+Unlike latent semantic analysis (LSA) (@deerwester_indexing_1990) and probabilistic LSA (@hofmann_probabilistic_1999), LDA involves modeling the data-generating process, in which an author chooses words to create a desired mix of topics in documents. It assigns topics to individual words through iterative sampling based on co-occurrences of words in documents. This algorithm was implemented in the several R packages that include topicmodels (@grun_topicmodels_2024) and lda (@chang_lda_2024).
+
+The LDA was further developed to address the sparsity of word co-occurrences in short documents (@amoualian_streaming-lda_2016, @du_sequential_2012, @gruber_hidden_2007, @jiang_sentence_2019, @yan_biterm_2013, @watanabe_seeded_2023), the fragmentation or agglomeration of topics (@chien_latent_2018, @syed_exploring_2018, @wallach_rethinking_2009), and the high computational costs of iterative sampling (@newman_distributed_2009, @smyth_asynchronous_2008, @nutakki_distributed_2014). 
+
+The enhanced algorithms enable LDA to become much more useful for social scientists. However, the lack of implementations in accessible software packages has led to the widespread use of the original algorithm without experiencing the advanced capabilities of the proposed alternatives.  Therefore, I have developed an R package seededlda that implements algorithms for distributed computing (@newman_distributed_2009), semi-supervised learning (@lu_multi-aspect_2011), sequential sampling (@watanabe_seeded_2023), Dirichlet prior adjustment, and convergence detection. 
+
+In the following sections, I first identify common problems that applied researchers face when they employ LDA in their research. Second, I explain how the enhanced algorithm  solve these problems. Third, I employ the package to classify sentences from the United Nations General Assembly speech corpus (@baturo_understanding_2017) to demonstrate how the algorithms lead to more plausible conclusions in content.
+
 
 # Algorithms
 
@@ -54,7 +67,7 @@ $$
 $$
 
 \begin{figure}
-\includegraphics[width=7cm]{lda.png}
+\includegraphics[width=10cm]{lda.png}
 \caption{Graphical model of a simple LDA. Gray circles are variables whose values are known, whereas white circles are latent variables whose values are unknown. $\theta$ and $\phi$ are the $|D| \times K$ and $K \times |V|$ matrices, respectively; $Z$ is a vector to record topics words, $W$, in document $d$; $d$ is one of the documents $d \in D$; $v$ is one of the unique words $v \in V$ in the corpus.}
 \end{figure}
 
@@ -63,31 +76,6 @@ $$
 \input{algorithm1.tex}
 \end{algorithm}
 
-```{r, cache=TRUE, message=FALSE}
-library(quanteda)
-library(seededlda)
-#setwd("C:/Users/watan/Dropbox/LDA2") # to delete
-
-dict <- dictionary(file = "C:/Users/watan/Dropbox/LDA2/seedwords_glob.yml", levels = 2)
-
-corp <- readRDS("C:/Users/watan/Dropbox/LDA2/data/corpus.RDS") |>
- corpus_subset(year >= 1991)
-
-toks <- tokens(corp, concatenator = " ") |>
- tokens_remove("^[\\p{N}\\p{P}]+$", valuetype = "regex", padding = TRUE) %>% 
- tokens_remove(stopwords("en"),  min_nchar = 2, padding = TRUE)
-
-dfmt <- dfm(toks, remove_padding = TRUE) %>% 
- dfm_trim(min_termfreq = 10)
-
-dfmt0 <- dfm_sample(dfmt, 10000) 
-```
-
-
-```{r, cache=TRUE}
-lda1 <- textmodel_lda(dfmt0, k = 6, max_iter = 1000, verbose = TRUE)
-terms(lda1)
-```
 
 ## Seeded LDA
 
@@ -102,11 +90,6 @@ $$
 $$
 
 
-```{r, cache=TRUE}
-dict
-lda2 <- textmodel_seededlda(dfmt0, dict, max_iter = 1000, verbose = TRUE)
-terms(lda2)
-```
 
 ## Sequential LDA
 
@@ -132,7 +115,8 @@ Pseudo-code for the enhanced LDA with parallel computing and Dirichlet prior adj
 \input{algorithm3.tex}
 \end{algorithm}
 
-## Distributed Asymmetric LDA
+
+## Asymmetric LDA
 
 \begin{algorithm}
 \caption{
@@ -140,4 +124,144 @@ Pseudo-code for DAA. It enhances LDA by adding parallel computing, Dirichlet pri
 }
 \input{algorithm4.tex}
 \end{algorithm}
+
+## Implementation
+
+Pre-processing of textual data can be performed using **quanteda** because **seededlda** is based on the package.
+
+```{r, message=FALSE}
+library(quanteda)
+library(seededlda)
+library(ggplot2)
+
+dict <- dictionary(file = "seededlda/data/seedwords.yml", levels = 2)
+
+corp <- readRDS("seededlda/data/corpus.RDS") |>
+ corpus_subset(year >= 1991)
+
+toks <- tokens(corp, remove_punct = TRUE, remove_number = TRUE, 
+               concatenator = " ") |>
+ tokens_remove(stopwords("en"), min_nchar = 2, padding = TRUE) |>
+ tokens_compound(dict)
+
+dfmt_full <- dfm(toks, remove_padding = TRUE) %>% 
+ dfm_trim(min_termfreq = 10)
+
+set.seed(1234)
+id <- levels(docid(dfmt_full))
+id <- sample(id, length(id) * 0.1)
+dfmt <- dfm_subset(dfmt_full, docid_ %in% id) 
+```
+
+### Simple LDA
+
+```{r}
+lda <- textmodel_lda(dfmt, k = 8, max_iter = 500, verbose = TRUE)
+terms(lda)
+```
+
+### Distributed LDA
+
+```{r}
+lda_dis <- textmodel_lda(dfmt, k = 8, max_iter = 500, batch_size = 0.01, 
+                         verbose = TRUE)
+terms(lda_dis)
+```
+
+
+### Seeded LDA
+
+```{r}
+dict
+```
+
+```{r}
+lda_seed <- textmodel_seededlda(dfmt, dict, residual = 2, max_iter = 500, 
+                                batch_size = 0.01, verbose = TRUE)
+terms(lda_seed)
+```
+
+### Sequential LDA
+
+```{r}
+lda_seq <- textmodel_seededlda(dfmt, dict, residual = 2, max_iter = 500, 
+                               gamma = 0.5, batch_size = 0.01, verbose = TRUE)
+terms(lda_seq)
+```
+
+```{r}
+tmp <- reshape2::melt(lda_seed$theta[seq(1, 25),1:6], c("docname", "topic"))
+tmp$sentence <- as.integer(stringi::stri_extract_last_regex(tmp$docname, "\\d+"))
+ggplot(tmp, aes(sentence, value, color = topic)) + 
+ geom_line() +
+ geom_point() +
+ xlab("Sentence ID") + ylab("Probability") +
+    labs(group = "Topics", color = "Topics", shape = "Topics") +
+    theme_minimal() +
+    #facet_wrap(vars(topic)) +
+    theme(legend.position = "bottom",
+          axis.title.x = element_text(margin = margin(t = 20, r = 0, b = 0, l = 0)),
+          axis.title.y = element_text(margin = margin(t = 0, r = 20, b = 0, l = 0)))
+```
+
+
+### Asymmetric priors
+
+```{r}
+lda_asy <- textmodel_seededlda(dfmt, dict, residual = 2, max_iter = 500, 
+                               gamma = 0.5, adjust_alpha = 0.25, batch_size = 0.01, 
+                               verbose = TRUE)
+print(lda_asy$alpha)
+```
+
+## Convergence detection
+
+```{r}
+lda_cnv <- textmodel_seededlda(dfmt, dict, residual = 2, auto_iter = TRUE, 
+                               gamma = 0.5,adjust_alpha = 0.25, batch_size = 0.01, 
+                               verbose = TRUE)
+terms(lda_cnv)
+```
+
+## Example
+
+```{r}
+# lda_syn <- textmodel_seededlda(dfmt, dict, residual = 2, auto_iter = TRUE, verbose = TRUE,
+#                                batch_size = 0.01, gamma = 0.5, adjust_alpha = 0)
+lda_syn <- textmodel_seededlda(dfmt, dict, residual = 2, auto_iter = TRUE,
+                               batch_size = 0.01, gamma = 0.5, adjust_alpha = 0,
+                               verbose = TRUE)
+lda_asy <- textmodel_seededlda(dfmt, dict, residual = 2, auto_iter = TRUE, 
+                               batch_size = 0.01, gamma = 0.5, adjust_alpha = 0.25,
+                               verbose = TRUE)
+```
+
+```{r}
+dat_syn <- docvars(lda_syn$data)
+dat_asy <- docvars(lda_asy$data)
+
+dat_syn$adjust_alpha <- lda_syn$adjust_alpha
+dat_asy$adjust_alpha <- lda_asy$adjust_alpha
+
+dat_syn$topic<- topics(lda_syn, select = names(lda_syn$dictionary))
+dat_asy$topic <- topics(lda_asy, select = names(lda_asy$dictionary))
+
+dat <- rbind(dat_syn, dat_asy)
+dat$dummy <- rep(1, nrow(dat))
+dat$adjust_alpha <- factor(dat$adjust_alpha > 0, levels = c(FALSE, TRUE),
+                           labels = c("Symmetric model", "Asymmetric model"))
+dat <- subset(dat, !is.na(topic))
+
+ggplot(dat, aes(year, dummy, group = topic, color = topic, shape = topic)) +
+    #geom_line() +
+    stat_summary(fun = sum, geom = "line") +
+    stat_summary(fun = sum, geom = "point") +
+    xlab("Year") + ylab("N. of sentences") +
+    labs(group = "Topics", color = "Topics", shape = "Topics") +
+    theme_minimal() +
+    facet_wrap(vars(adjust_alpha)) +
+    theme(legend.position = "bottom",
+          axis.title.x = element_text(margin = margin(t = 20, r = 0, b = 0, l = 0)),
+          axis.title.y = element_text(margin = margin(t = 0, r = 20, b = 0, l = 0)))
+```
 
