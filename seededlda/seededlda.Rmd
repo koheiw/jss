@@ -39,30 +39,29 @@ options(prompt = 'R> ', continue = '+ ', fig.align = 'center', cache = TRUE)
 
 # Introduction
 
-Scholars have long been analyzing topics or themes of documents to understand important issues. As large textual data became more accessible, thanks to online news, social media, and digital archives, many found topic models very useful because their unsupervised algorithms allow users to identify topics in large corpora without much human involvement. Among various topic models, latent Dirichlet allocation (LDA) (@blei_latent_2003) has been arguably the most popular topic model in applied research. 
+Scholars have long been analyzing topics or themes of documents to understand important issues. As large textual data became more accessible, thanks to online news, social media, and digital archives, many found topic models very useful because their unsupervised algorithms allow users to identify topics in large corpora without much human involvement. Among various topic models, latent Dirichlet allocation (LDA) [@blei2003] has been arguably the most popular topic model in applied research.
 
-Unlike latent semantic analysis (LSA) (@deerwester_indexing_1990) and probabilistic LSA (@hofmann_probabilistic_1999), LDA involves modeling the data-generating process, in which an author chooses words to create a desired mix of topics in documents. It assigns topics to individual words through iterative sampling based on co-occurrences of words in documents. This algorithm was implemented in the several R packages that include topicmodels (@grun_topicmodels_2024) and lda (@chang_lda_2024).
+Unlike latent semantic analysis (LSA) [@deerwester1990] and probabilistic LSA [@hofmann1999], LDA involves modeling the data-generating process, in which an author chooses words to create a desired mix of topics in documents. It assigns topics to individual words through iterative sampling based on co-occurrences of words in documents. This algorithm was implemented in the several R packages that include **topicmodels** [@grün2024] and **lda** [@chang2024].
 
-The LDA was further developed to address the sparsity of word co-occurrences in short documents (@amoualian_streaming-lda_2016, @du_sequential_2012, @gruber_hidden_2007, @jiang_sentence_2019, @yan_biterm_2013, @watanabe_seeded_2023), the fragmentation or agglomeration of topics (@chien_latent_2018, @syed_exploring_2018, @wallach_rethinking_2009), and the high computational costs of iterative sampling (@newman_distributed_2009, @smyth_asynchronous_2008, @nutakki_distributed_2014). 
+The LDA was further developed to address the sparsity of word co-occurrences in short documents [@amoualian2016; @du2012; @gruber2007; @jiang2019; @yan2013; @watanabe2023], the fragmentation or agglomeration of topics [@chien2018; @syed2018; @wallach2009], and the high computational costs of iterative sampling [@newman2009; @smyth2008; @nutakki2014].
 
-The enhanced algorithms enable LDA to become much more useful for social scientists. However, the lack of implementations in accessible software packages has led to the widespread use of the original algorithm without experiencing the advanced capabilities of the proposed alternatives.  Therefore, I have developed an R package seededlda that implements algorithms for distributed computing (@newman_distributed_2009), semi-supervised learning (@lu_multi-aspect_2011), sequential sampling (@watanabe_seeded_2023), Dirichlet prior adjustment, and convergence detection. 
+The enhanced algorithms enable LDA to become much more useful for social scientists. However, the lack of implementations in accessible software packages has led to the widespread use of the original algorithm without experiencing the advanced capabilities of the proposed alternatives. Therefore, I have developed an R package seededlda that implements algorithms for distributed computing [@newman2009], semi-supervised learning [@lu2011], sequential sampling [@enterline2000; @watanabe2023], Dirichlet prior adjustment, and convergence detection.
 
-In the following sections, I first identify common problems that applied researchers face when they employ LDA in their research. Second, I explain how the enhanced algorithm  solve these problems. Third, I employ the package to classify sentences from the United Nations General Assembly speech corpus (@baturo_understanding_2017) to demonstrate how the algorithms lead to more plausible conclusions in content.
-
+In the following sections, I first identify common problems that applied researchers face when they employ LDA in their research. Second, I explain how the enhanced algorithm solve these problems. Third, I employ the package to classify sentences from the United Nations General Assembly speech corpus [@baturo2017] to demonstrate how the algorithms lead to more plausible conclusions in content.
 
 # Algorithms
 
 ## Basic LDA
 
-To infer the document-topic distribution $\theta$ and the topic-word distribution $\phi$, assigned topics are saved in $M_{dk}$ and $N_{kv}$. The former is the frequency of topic k found in document $d$, the latter is the frequency of topic $k$ assigned to unique word $v$, and $\alpha_k$ and $\beta_k$ are the Dirichlet priors, which are added to the frequency counts to smooth the distributions in $\theta$ and $\phi$.  The Gibbs sampler assigns topics to the words in the corpus based on the sampling distribution, $G$, derived as a product of $\theta$ and $\phi$. These relationships between are defined as follows:
+To infer the document-topic distribution $\theta$ and the topic-word distribution $\phi$, assigned topics are saved in $M_{dk}$ and $N_{kv}$. The former is the frequency of topic k found in document $d$, the latter is the frequency of topic $k$ assigned to unique word $v$, and $\alpha_k$ and $\beta_k$ are the Dirichlet priors, which are added to the frequency counts to smooth the distributions in $\theta$ and $\phi$. The Gibbs sampler assigns topics to the words in the corpus based on the sampling distribution, $G$, derived as a product of $\theta$ and $\phi$. These relationships between are defined as follows:
 
 $$
 G = P(Z=k|W=v,d)\propto\theta_{dk}\phi_{kv}
 $$
+
 $$
 \theta_{dk} = P(Z=k|d,\alpha_k) = \frac{M_{dk}+\alpha_k}{M_{d.}+\sum\alpha_k}
-$$
-$$
+$$ $$
 \phi_{kv} = P(W=v|k,\beta_k) = \frac{N_{kv}+\beta_k}{N_{k.}+\sum\beta_k}
 $$
 
@@ -70,12 +69,10 @@ $$
 \includegraphics[width=10cm]{lda.png}
 \caption{Graphical model of a simple LDA. Gray circles are variables whose values are known, whereas white circles are latent variables whose values are unknown. $\theta$ and $\phi$ are the $|D| \times K$ and $K \times |V|$ matrices, respectively; $Z$ is a vector to record topics words, $W$, in document $d$; $d$ is one of the documents $d \in D$; $v$ is one of the unique words $v \in V$ in the corpus.}
 \end{figure}
-
 \begin{algorithm}
 \caption{Pseudo-code for a simple LDA. Gibbs sampling is repeated max\_iter times.}
 \input{algorithm1.tex}
 \end{algorithm}
-
 
 ## Seeded LDA
 
@@ -88,8 +85,6 @@ $$
 $$
 \omega_{kv}=100\mu\frac{f_v}{\sum f}
 $$
-
-
 
 ## Sequential LDA
 
@@ -107,14 +102,12 @@ Pseudo-code for the enhanced LDA with distributed computing. Gibbs sampling is r
 }
 \input{algorithm2.tex}
 \end{algorithm}
-
 \begin{algorithm}
 \caption{
 Pseudo-code for the enhanced LDA with parallel computing and Dirichlet prior adjustment. Adjusted $\alpha_k$ serves as Dirichlet priors in the next iteration, $i+1$.
 }
 \input{algorithm3.tex}
 \end{algorithm}
-
 
 ## Asymmetric LDA
 
@@ -168,7 +161,6 @@ lda_dis <- textmodel_lda(dfmt, k = 8, max_iter = 500, batch_size = 0.01,
 terms(lda_dis)
 ```
 
-
 ### Seeded LDA
 
 ```{r}
@@ -203,7 +195,6 @@ ggplot(tmp, aes(sentence, value, color = topic)) +
           axis.title.x = element_text(margin = margin(t = 20, r = 0, b = 0, l = 0)),
           axis.title.y = element_text(margin = margin(t = 0, r = 20, b = 0, l = 0)))
 ```
-
 
 ### Asymmetric priors
 
@@ -264,4 +255,3 @@ ggplot(dat, aes(year, dummy, group = topic, color = topic, shape = topic)) +
           axis.title.x = element_text(margin = margin(t = 20, r = 0, b = 0, l = 0)),
           axis.title.y = element_text(margin = margin(t = 0, r = 20, b = 0, l = 0)))
 ```
-
