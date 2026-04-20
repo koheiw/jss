@@ -49,7 +49,28 @@ The enhanced algorithms enable LDA to become much more useful for social scienti
 
 In the following sections, I first identify common problems that applied researchers face when they employ LDA in their research. Second, I explain how the enhanced algorithm solve these problems. Third, I employ the package to classify sentences from the United Nations General Assembly speech corpus [@baturo2017] to demonstrate how the algorithms lead to more plausible conclusions in content.
 
+# Problems
+
+Scholars often find it difficult to use LDA in their research because (1) it takes a significant amount time to identify topics in a large corpus [@newman2009]; (2) it fragments topics into sub-topics in a corpus of short documents [@nutakki2014; @lin2023]; (3) it fails to identify highly specific topics defined using seed words [@watanabe2023].
+
+LDA takes a considerable amount of time to identify topics in a large corpus because it employs an iterative algorithm and collapsed Gibbs sampling to assign the most likely topic for each word. Furthermore, its computational cost grows proportionally to the total number of words in the corpus, the number of topics to identify, and the number of iterations [@heinrich2008]. This often leads to a quadratic increase in the execution time because the diverse content of a large corpus requires more topics to be identified. The execution time can be shortened by Gibbs sampling on multiple processors [@newman2009], although distributed computing is not very effective when the number of topics is small.
+
+LDA tends to fragment topics into sub-topics in a corpus of short documents because it cannot accurately infer the overall probability of topics through the sampling of topics in individual documents. Usually, the frequencies of topics in long documents correlate with their overall frequencies, but they do not in short documents (e.g., sentences and social media posts) because short documents only contain words for a few related topics [@yan2013]. The use of asymmetric Dirichlet priors helps LDA to classify short documents, but it is difficult for the users to manually set the hyper-parameters.
+
+Semi-supervised LDA fails to identify highly specific topics defined using seed words because seed words do not offer information on the frequencies of topics. Seed words increase the chance that their co-occurring words receive desired topics by inducing bias through pseudo-counts in topic assignments [@lu2011]. The use of unequal numbers of seed words (or their matches) for topics informs the Gibbs sampler about their frequencies, but the number of seed words is usually determined by the complexity or broadness of the topics instead of their frequencies [@watanabe2020].
+
 # Algorithms
+
+LDA infers parameters from the distributions of documents and words through Gibbs sampling. In Figure 1, the most important variables are topics, $Z_h$, and words used to express these topics, $W_h$. The Gibbs sampler iteratively assigns the most likely topics to each of the $Z_h$ based on the $\theta$ and $\phi$ distributions, whose shapes are determined by the Dirichlet priors, $\alpha_k$ and $\beta_k$, respectively. The values of the priors are equal for all the topics, $k = \{1, 2, \cdots, K\}$, in symmetric models but unequal in asymmetric models.
+
+\begin{figure}
+\includegraphics[width=10cm]{lda.png}
+\caption{Graphical model of a simple LDA. Gray circles are variables whose values are known, whereas white circles are latent variables whose values are unknown. $\theta$ and $\phi$ are the $|D| \times K$ and $K \times |V|$ matrices, respectively; $Z$ is a vector to record topics words, $W$, in document $d$; $d$ is one of the documents $d \in D$; $v$ is one of the unique words $v \in V$ in the corpus.}
+\end{figure}
+\begin{algorithm}
+\caption{Pseudo-code for a simple LDA. Gibbs sampling is repeated max\_iter times.}
+\input{algorithm1.tex}
+\end{algorithm}
 
 ## Basic LDA
 
@@ -64,15 +85,6 @@ $$
 $$ $$
 \phi_{kv} = P(W=v|k,\beta_k) = \frac{N_{kv}+\beta_k}{N_{k.}+\sum\beta_k}
 $$
-
-\begin{figure}
-\includegraphics[width=10cm]{lda.png}
-\caption{Graphical model of a simple LDA. Gray circles are variables whose values are known, whereas white circles are latent variables whose values are unknown. $\theta$ and $\phi$ are the $|D| \times K$ and $K \times |V|$ matrices, respectively; $Z$ is a vector to record topics words, $W$, in document $d$; $d$ is one of the documents $d \in D$; $v$ is one of the unique words $v \in V$ in the corpus.}
-\end{figure}
-\begin{algorithm}
-\caption{Pseudo-code for a simple LDA. Gibbs sampling is repeated max\_iter times.}
-\input{algorithm1.tex}
-\end{algorithm}
 
 ## Seeded LDA
 
