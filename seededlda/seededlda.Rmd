@@ -45,7 +45,12 @@ Unlike latent semantic analysis (LSA) [@deerwester1990] and probabilistic LSA [@
 
 The LDA was further developed to address the sparsity of word co-occurrences in short documents [@amoualian2016; @du2012; @gruber2007; @jiang2019; @yan2013; @watanabe2023], the fragmentation or agglomeration of topics [@chien2018; @syed2018; @wallach2009], and the high computational costs of iterative sampling [@newman2009; @smyth2008; @nutakki2014].
 
-The enhanced algorithms enable LDA to become much more useful for social scientists. However, the lack of implementations in accessible software packages has led to the widespread use of the original algorithm without experiencing the advanced capabilities of the proposed alternatives. Therefore, I have developed an R package seededlda that implements algorithms for distributed computing [@newman2009], semi-supervised learning [@lu2011], sequential sampling [@enterline2000; @watanabe2023], Dirichlet prior adjustment, and convergence detection.
+The enhanced algorithms enable LDA to become much more useful for social scientists. However, the lack of implementations in accessible software packages has led to the widespread use of the original algorithm without experiencing the advanced capabilities of the proposed alternatives.[^1] Therefore, I have developed an R package seededlda that implements algorithms for distributed computing [@newman2009], semi-supervised learning [@lu2011], sequential sampling [@enterline2000; @watanabe2023], Dirichlet prior adjustment, and convergence detection.
+
+[^1]: For example, the *Gensim* package for Python
+    does not support optimization of asymmetric priors when distributed computing
+    is enabled. The *topicmodels* package for R neither performs distributed computing nor estimates
+    asymmetric priors.
 
 In the following sections, I first identify common problems that applied researchers face when they employ LDA in their research. Second, I explain how the enhanced algorithm solve these problems. Third, I employ the package to classify sentences from the United Nations General Assembly speech corpus [@baturo2017] to demonstrate how the algorithms lead to more plausible conclusions in content.
 
@@ -74,7 +79,9 @@ LDA infers parameters from the distributions of documents and words through Gibb
 
 ## Basic LDA
 
-To infer the document-topic distribution $\theta$ and the topic-word distribution $\phi$, assigned topics are saved in $M_{dk}$ and $N_{kv}$. The former is the frequency of topic k found in document $d$, the latter is the frequency of topic $k$ assigned to unique word $v$, and $\alpha_k$ and $\beta_k$ are the Dirichlet priors, which are added to the frequency counts to smooth the distributions in $\theta$ and $\phi$. The Gibbs sampler assigns topics to the words in the corpus based on the sampling distribution, $G$, derived as a product of $\theta$ and $\phi$. These relationships between are defined as follows:
+To infer the document-topic distribution $\theta$ and the topic-word distribution $\phi$, assigned topics are saved in $M_{dk}$ and $N_{kv}$. The former is the frequency of topic k found in document $d$, the latter is the frequency of topic $k$ assigned to unique word $v$, and $\alpha_k$ and $\beta_k$ are the Dirichlet priors, which are added to the frequency counts to smooth the distributions in $\theta$ and $\phi$.[^2] The Gibbs sampler assigns topics to the words in the corpus based on the sampling distribution, $G$, derived as a product of $\theta$ and $\phi$. These relationships between are defined as follows:
+
+[^2]: For example, if $α_k=0.5$, it is assumed that topic $k$ appears at least 0.5 times in any document; if $β_k=0.1$, it is assumed that all the words appear at least 0.1 times in topic $k$.
 
 $$
 G = P(Z=k|W=v,d)\propto\theta_{dk}\phi_{kv}
@@ -85,6 +92,14 @@ $$
 $$ $$
 \phi_{kv} = P(W=v|k,\beta_k) = \frac{N_{kv}+\beta_k}{N_{k.}+\sum\beta_k}
 $$
+
+In Figure 2, $z_i$ is the topic assigned for word $h$ in document $d$ by the Gibbs sampler at iteration $i$. A simple LDA completes the inference by repeating sampling of topics until $i$ reaches a fixed number of iterations, $max\_iter$, which is usually between 1000 and 3000.
+
+The original algorithm was enhanced in two steps: I first implemented distributed LDA because its parallel Gibbs sampling determines how other algorithms function. Next, I added seeded LDA, sequential LDA, the Dirichlet prior optimization, and the convergence detection algorithms to the model. Since all these algorithms are an extension of LDA, they should be enabled or disabled independently from each other. For example, the model is distributed LDA when only the first algorithm is enabled, but it becomes a distributed seeded LDA when the second algorithm is also enabled. Therefore, the main challenge in developing the package is significantly speeding up LDA while generalizing its original algorithm for extra capabilities.
+
+The first algorithm was initially developed for approximately distributed LDA to increase the ability of LDA to process very large corpora [@newman2009]. The second and third were for seeded sequential LDA to weakly supervise LDA using seed words in the classification of sentences [@watanabe2023]. The fourth is a low-cost algorithm for automatically adjusting Dirichlet priors to avoid fragmentation or agglomeration of topics; the fifth is a simple algorithm for convergence detection to minimize the computational costs of LDA. While the first three algorithms are adopted from earlier studies, the last two are newly developed in this study.
+
+Following the notations in @watanabe2023, I concisely explain the algorithms with the aid of pseudo-code (Figures 2–5). The package is implemented in C++ using the Intel Thread Building Blocks library and published on CRAN.
 
 ## Seeded LDA
 
@@ -107,6 +122,10 @@ P\left(Z=k\middle| W=v,\ d\right)\propto\theta_{dk}\theta_{\left(d-1\right)k}^\g
 $$
 
 ## Distributed LDA
+
+LDA is computationally expensive because its algorithm assigns the most likely topic, $k$, to each word in the corpus based on the sampling distribution derived from $\theta$ and $\phi$. Therefore, an analysis of a larger corpus not only increases the frequency of sampling proportionally to the total number of words in the corpus, $N$, but also the number of parameters proportionally to the number of topics, $K$, the number of documents, $D$, and the size of the vocabulary, $V$.
+
+Among several distributed LDA algorithms, I chose the approximately distributed LDA [@newman2009] for its simplicity and generalizability. It assigns topics to words in the same way as the simple LDA, but it splits data into smaller chunks and performs Gibbs sampling on multiple processors in parallel (Figure 3). While $N_{kv}$ and $M_{dk}$ are global variables shared by all the processors, each subprocess $e=\{1,2, \cdots, E\}$ has a local variable to record the topic assignment ${\acute{N}}_{kv}^e$. In every 10 iterations, these local counts are added to the global variable, $N_{kv}$, to synchronize the topic assignment between the processors.
 
 \begin{algorithm}
 \caption{
