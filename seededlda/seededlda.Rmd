@@ -47,10 +47,7 @@ The LDA was further developed to address the sparsity of word co-occurrences in 
 
 The enhanced algorithms enable LDA to become much more useful for social scientists. However, the lack of implementations in accessible software packages has led to the widespread use of the original algorithm without experiencing the advanced capabilities of the proposed alternatives.[^1] Therefore, I have developed an R package seededlda that implements algorithms for distributed computing [@newman2009], semi-supervised learning [@lu2011], sequential sampling [@enterline2000; @watanabe2023], Dirichlet prior adjustment, and convergence detection.
 
-[^1]: For example, the *Gensim* package for Python
-    does not support optimization of asymmetric priors when distributed computing
-    is enabled. The *topicmodels* package for R neither performs distributed computing nor estimates
-    asymmetric priors.
+[^1]: For example, the *Gensim* package for Python does not support optimization of asymmetric priors when distributed computing is enabled. The *topicmodels* package for R neither performs distributed computing nor estimates asymmetric priors.
 
 In the following sections, I first identify common problems that applied researchers face when they employ LDA in their research. Second, I explain how the enhanced algorithm solve these problems. Third, I employ the package to classify sentences from the United Nations General Assembly speech corpus [@baturo2017] to demonstrate how the algorithms lead to more plausible conclusions in content.
 
@@ -81,7 +78,7 @@ LDA infers parameters from the distributions of documents and words through Gibb
 
 To infer the document-topic distribution $\theta$ and the topic-word distribution $\phi$, assigned topics are saved in $M_{dk}$ and $N_{kv}$. The former is the frequency of topic k found in document $d$, the latter is the frequency of topic $k$ assigned to unique word $v$, and $\alpha_k$ and $\beta_k$ are the Dirichlet priors, which are added to the frequency counts to smooth the distributions in $\theta$ and $\phi$.[^2] The Gibbs sampler assigns topics to the words in the corpus based on the sampling distribution, $G$, derived as a product of $\theta$ and $\phi$. These relationships between are defined as follows:
 
-[^2]: For example, if $α_k=0.5$, it is assumed that topic $k$ appears at least 0.5 times in any document; if $β_k=0.1$, it is assumed that all the words appear at least 0.1 times in topic $k$.
+[^2]: For example, if $\alpha_k=0.5$, it is assumed that topic $k$ appears at least 0.5 times in any document; if $\beta_k=0.1$, it is assumed that all the words appear at least 0.1 times in topic $k$.
 
 $$
 G = P(Z=k|W=v,d)\propto\theta_{dk}\phi_{kv}
@@ -106,7 +103,7 @@ Following the notations in @watanabe2023, I concisely explain the algorithms wit
 @watanabe_theory-driven_2022
 
 $$
-{\phi}_{kv}=\frac{N_{kv}+\ \beta+\omega_{kv}}{N_{.v}+\beta\left|V\right|}
+{\phi}_{kv}=\frac{N_{kv}+\beta+\omega_{kv}}{N_{.v}+\beta\left|V\right|}
 $$
 
 $$
@@ -140,7 +137,28 @@ Pseudo-code for the enhanced LDA with parallel computing and Dirichlet prior adj
 \input{algorithm3.tex}
 \end{algorithm}
 
-## Asymmetric LDA
+## Asymmetric LDA/Dirichlet Prior Optimization
+
+LDA is often fitted with symmetric Dirichlet priors, $\alpha$ and $\beta$, because the users lack the knowledge of topic distributions. Although symmetric priors are usually inappropriate [@chien2018], the algorithm can still identify topics when the conditional and the marginal probabilities of topics are similar, $P(Z=k|d) \approx P(Z=k)$. This is often the case in a corpus of long documents, where topics can occur multiple times, but this is rarely the case in a corpus of short documents, where topics can occur only a few times.
+
+When the condition is unsatisfied, the Gibbs sampler requires asymmetric priors for $theta$, $\{\alpha_1, \alpha_2, \cdots, \alpha_k \}$, to accurately assign topics.[^3] Since it is very difficult for the users to specify the parameters manually, I propose a new low-cost algorithm to set asymmetric priors, $\{\hat{\alpha}_1, \hat{\alpha}_2, \cdots, \hat{\alpha}_k \}$, by automatically adjusting the initial value, $\alpha$, for each topic. This allows the algorithm to update the priors for iteration i based on the posterior probability of topics in iteration $i-1$ (Figure 4).
+
+[^3]: Following the recommendation by Wallach et al. (2009), the Dirichlet priors for $\phi$, $\beta_k$ are left symmetric in DAA.
+
+To limit the amount of the adjustment, the algorithm computes a small constant, $\epsilon_k = \upsilon \frac{\alpha}{M_{.k}}$ , with a hyper-parameter, $0 \leq \upsilon < 1$, based on the initial random assignment of topics to words. If $\upsilon = 0$, the priors cannot change; if $\upsilon = 0.9$, $\hat{\alpha}_k$ can drop to 10% of the initial value. Each time the Gibbs sampler updates the assigned topics, $\epsilon_k$ is added to the new topic and removed from the old topic to make asymmetric priors. Since a decrease (or increase) in a prior for a topic is offset by an increase (or decrease) in priors for other topics, the total sum of the asymmetric priors remains constant.
+
+\begin{algorithm}
+\caption{
+Pseudo-code for the enhanced LDA with parallel computing and Dirichlet prior adjustment. Adjusted $\alpha_k$ serves as Dirichlet priors in the next iteration, $i+1$.
+}
+\input{algorithm3.tex}
+\end{algorithm}
+
+# Convergence Detection
+
+In LDA, Gibbs sampling is usually repeated between 1,000 and 3,000 times because the users cannot easily determine the necessary number of iterations before fitting models. Although distributed computing helps to complete large numbers of iterations quickly, the execution time can become much shorter by only interrupting the iterations earlier when the topic assignment is stabilized.
+
+It is difficult to detect the convergence in Gibbs sampling in general [@gelman1992], but the use of topic divergence or perplexity is infeasible because of the high computational costs. Therefore, I devised the delta statistic as a simple convergence detection criterion for DAA (Figure 5). It measures the stability of the topic assignment by comparing current and previous topics, $\delta_i = \left| z_j \ne z_{j-1} \right|$, and continues Gibbs sampling as long as the statistic is decreasing, $\delta_i \ne \delta_{i-1}$. Since the statistic tends to fall quickly in the first few hundred iterations, it can reduce the computational cost dramatically. In distributed computing, the local variable, $\acute{\delta^e} = \left| z_j \ne z_{j-1} \right|$, can be obtained in the last sub-iteration, $j=10$, and added to the global variable, $\delta_i$, to detect convergence.
 
 \begin{algorithm}
 \caption{
