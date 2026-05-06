@@ -128,7 +128,7 @@ Pseudo-code for the enhanced LDA with distributed computing. Gibbs sampling is r
 \end{algorithm}
 \begin{algorithm}
 \caption{
-Pseudo-code for the enhanced LDA with parallel computing and Dirichlet prior adjustment. Adjusted $\alpha_k$ serves as Dirichlet priors in the next iteration, $i+1$.
+Pseudo-code for LDA with parallel computing and Dirichlet prior adjustment. Adjusted $\alpha_k$ serves as Dirichlet priors in the next iteration, $i+1$.
 }
 \input{algorithm3.tex}
 \end{algorithm}
@@ -145,7 +145,7 @@ To limit the amount of the adjustment, the algorithm computes a small constant, 
 
 \begin{algorithm}
 \caption{
-Pseudo-code for the enhanced LDA with parallel computing and Dirichlet prior adjustment. Adjusted $\alpha_k$ serves as Dirichlet priors in the next iteration, $i+1$.
+Pseudo-code for LDA with parallel computing and Dirichlet prior adjustment. Adjusted $\alpha_k$ serves as Dirichlet priors in the next iteration, $i+1$.
 }
 \input{algorithm3.tex}
 \end{algorithm}
@@ -158,35 +158,45 @@ It is difficult to detect the convergence in Gibbs sampling in general [@gelman1
 
 \begin{algorithm}
 \caption{
-Pseudo-code for DAA. It enhances LDA by adding parallel computing, Dirichlet prior adjustment, and convergence detection. Convergence is checked after each sub-iteration by comparing the value of $\delta_i$ and $\delta_{i-1}$.
+Pseudo-code LDA with parallel computing, Dirichlet prior adjustment, and convergence detection. Convergence is checked after each sub-iteration by comparing the value of $\delta_i$ and $\delta_{i-1}$.
 }
 \input{algorithm4.tex}
 \end{algorithm}
 
 ## Implementation
 
-The package is implemented in C++ using the Intel Thread Building Blocks library and published on CRAN.
+The package is implemented in C++ using the Intel Thread Building Blocks library for distributed computing, but its user functions are developed based on **quanteda** for flexible preprocessing of textual data. The code below analyzed the transcripts of speeches delivered at the United Nations General Assembly between 1991 and 2017 [@baturo2017] . Since the corpus contains 444,206 sentences, it poses challenges for researchers but they can produce intuitive results within reasonable time using **seededlda**.
 
-Pre-processing of textual data can be performed using **quanteda** because **seededlda** is based on the package.
+### Data pre-processing
+
+Pre-processing can be accomplished using **quanteda**. `tokens()` performs tokenization and feature selection such as removal of punctuation marks and numbers. `tokens_remove()` is removes common grammatical words and symbols. `tokens_compound()` combines multi-word expressions into single tokens. `dfm()` forms a document-feature matrix that will be passed to **seededlda**.
 
 ```{r, message=FALSE}
 library(quanteda)
 library(seededlda)
 library(ggplot2)
 
+# load seed dictionary
 dict <- dictionary(file = "seededlda/data/seedwords.yml", levels = 2)
 
+# load corpus
 corp <- readRDS("seededlda/data/corpus.RDS") |>
  corpus_subset(year >= 1991)
 
+# tokenize corpus
 toks <- tokens(corp, remove_punct = TRUE, remove_number = TRUE, 
                concatenator = " ") |>
  tokens_remove(stopwords("en"), min_nchar = 2, padding = TRUE) |>
  tokens_compound(dict)
 
-dfmt_full <- dfm(toks, remove_padding = TRUE) %>% 
+# form a document-feature matrix (DFM)
+dfmt_full <- dfm(toks, remove_padding = TRUE) |>
  dfm_trim(min_termfreq = 10)
 
+# print the DFM
+print(dfmt_full)
+
+# randomly sample 10% of speeches
 set.seed(1234)
 id <- levels(docid(dfmt_full))
 id <- sample(id, length(id) * 0.1)
@@ -195,6 +205,8 @@ dfmt <- dfm_subset(dfmt_full, docid_ %in% id)
 
 ### Simple LDA
 
+The number of topic is specified by the user via the `k` argument. The maximum number of iteration is set to `max_iter = 500`.
+
 ```{r}
 lda <- textmodel_lda(dfmt, k = 8, max_iter = 500, verbose = TRUE)
 terms(lda)
@@ -202,103 +214,121 @@ terms(lda)
 
 ### Distributed LDA
 
+When `batch_size = 0.01`, the corpus is split into small batches that contain 1% of the documents and distributed across multiple processors. The package uses all the processors unless the users limits the number through `options(seededlda_threads)`. Verbose message shows that the execution time is considerable shorter than Simple LDA.
+
 ```{r}
 lda_dis <- textmodel_lda(dfmt, k = 8, max_iter = 500, batch_size = 0.01, 
-                         verbose = TRUE)
+  verbose = TRUE)
 terms(lda_dis)
 ```
 
 ### Seeded LDA
 
+Topics can be pre-defined using **quanteda**'s dictionary object in `textmodel_seededlda()`. 
+
 ```{r}
 dict
 ```
 
+`residual` specifies the number of unseeded topics in the model.   
+
 ```{r}
 lda_seed <- textmodel_seededlda(dfmt, dict, residual = 2, max_iter = 500, 
-                                batch_size = 0.01, verbose = TRUE)
+  batch_size = 0.01, verbose = TRUE)
 terms(lda_seed)
 ```
 
 ### Sequential LDA
 
+The `gamma` exposes the $\gamma$ parameters to the users. When $gamma = 0.5$ in either `textmodel_seededlda()` or `textmodel_lda()`, the topics of preceding sentences are considered equally important as the topics of the current sentences. Seeded topics become clearer in sequential sampling is enabled.
+
 ```{r}
 lda_seq <- textmodel_seededlda(dfmt, dict, residual = 2, max_iter = 500, 
-                               gamma = 0.5, batch_size = 0.01, verbose = TRUE)
+  gamma = 0.5, batch_size = 0.01, verbose = TRUE)
 terms(lda_seq)
 ```
 
-```{r}
+Thanks to the sequential sampling of topics, the topics change smoothly over sentences, capturing the structures of speeches.
+
+```{r, echo=FALSE}
 tmp <- reshape2::melt(lda_seed$theta[seq(1, 25),1:6], c("docname", "topic"))
 tmp$sentence <- as.integer(stringi::stri_extract_last_regex(tmp$docname, "\\d+"))
 ggplot(tmp, aes(sentence, value, color = topic)) + 
- geom_line() +
- geom_point() +
- xlab("Sentence ID") + ylab("Probability") +
-    labs(group = "Topics", color = "Topics", shape = "Topics") +
-    theme_minimal() +
-    #facet_wrap(vars(topic)) +
-    theme(legend.position = "bottom",
-          axis.title.x = element_text(margin = margin(t = 20, r = 0, b = 0, l = 0)),
-          axis.title.y = element_text(margin = margin(t = 0, r = 20, b = 0, l = 0)))
+  geom_line() +
+  geom_point() +
+  xlab("Sentence ID") + ylab("Probability") +
+  labs(group = "Topics", color = "Topics", shape = "Topics") +
+  theme_minimal() +
+  #facet_wrap(vars(topic)) +
+  theme(legend.position = "bottom",
+        axis.title.x = element_text(margin = margin(t = 20, r = 0, b = 0, l = 0)),
+        axis.title.y = element_text(margin = margin(t = 0, r = 20, b = 0, l = 0)))
 ```
 
 ### Asymmetric priors
 
+Further, the $\mu$ parameter is set via the `adjust_alpha` argument. When `adjust_alpha = 0.25`, $\alpha$ can adjusted by 25% to capture more specific topics. `alpha = 0.5` for all the topics by default, but its values vary after after the adjustment.
+
 ```{r}
 lda_asy <- textmodel_seededlda(dfmt, dict, residual = 2, max_iter = 500, 
-                               gamma = 0.5, adjust_alpha = 0.25, batch_size = 0.01, 
-                               verbose = TRUE)
+  gamma = 0.5, adjust_alpha = 0.25, batch_size = 0.01, verbose = TRUE)
 print(lda_asy$alpha)
 ```
 
-## Convergence detection
+### Convergence detection
+
+`auto_iter = TRUE` can be used to terminate iterative sampling before it reaches `max_iter`. It often reduces the execution time significantly.
 
 ```{r}
 lda_cnv <- textmodel_seededlda(dfmt, dict, residual = 2, auto_iter = TRUE, 
-                               gamma = 0.5,adjust_alpha = 0.25, batch_size = 0.01, 
-                               verbose = TRUE)
+  gamma = 0.5, adjust_alpha = 0.25, batch_size = 0.01, verbose = TRUE)
 terms(lda_cnv)
 ```
 
 ## Example
 
+I fitted distributed seeded LDA with symmetric or asymmetric Dirichlet priors to illustrate how they can lead to different conclusions in content analysis. Both models are fitted with the strong sequential sampling (`gamma = 0.5`) and two unseeded topics for generic words; distributed computing and convergence detection are also enabled in both models. Moreover, the Dirichlet prior adjustment is enabled in the asymmetric model (`adjust_alpha = 0.25`) but disabled (`adjust_alpha = 0`) in the symmetric model to make it equivalent to distributed LDA.
+
 ```{r}
-# lda_syn <- textmodel_seededlda(dfmt, dict, residual = 2, auto_iter = TRUE, verbose = TRUE,
-#                                batch_size = 0.01, gamma = 0.5, adjust_alpha = 0)
 lda_syn <- textmodel_seededlda(dfmt, dict, residual = 2, auto_iter = TRUE,
-                               batch_size = 0.01, gamma = 0.5, adjust_alpha = 0,
-                               verbose = TRUE)
+  batch_size = 0.01, gamma = 0.5, adjust_alpha = 0, verbose = TRUE)
 lda_asy <- textmodel_seededlda(dfmt, dict, residual = 2, auto_iter = TRUE, 
-                               batch_size = 0.01, gamma = 0.5, adjust_alpha = 0.25,
-                               verbose = TRUE)
+  batch_size = 0.01, gamma = 0.5, adjust_alpha = 0.25, verbose = TRUE)
+```
+
+The most frequent topic terms of the two models were very similar but ...
+
+```{r}
+terms(lda_syn)
+terms(lda_asy)
 ```
 
 ```{r}
 dat_syn <- docvars(lda_syn$data)
-dat_asy <- docvars(lda_asy$data)
-
-dat_syn$adjust_alpha <- lda_syn$adjust_alpha
-dat_asy$adjust_alpha <- lda_asy$adjust_alpha
-
 dat_syn$topic<- topics(lda_syn, select = names(lda_syn$dictionary))
+dat_syn$type <- "symmetric"
+
+dat_asy <- docvars(lda_asy$data)
 dat_asy$topic <- topics(lda_asy, select = names(lda_asy$dictionary))
+dat_asy$type <- "asymmetric"
 
 dat <- rbind(dat_syn, dat_asy)
 dat$dummy <- rep(1, nrow(dat))
-dat$adjust_alpha <- factor(dat$adjust_alpha > 0, levels = c(FALSE, TRUE),
-                           labels = c("Symmetric model", "Asymmetric model"))
+dat$type <- factor(dat$type, levels = c("symmetric", "asymmetric"))
 dat <- subset(dat, !is.na(topic))
+```
 
+```{r, warning=FALSE, echo=FALSE}
 ggplot(dat, aes(year, dummy, group = topic, color = topic, shape = topic)) +
-    #geom_line() +
-    stat_summary(fun = sum, geom = "line") +
-    stat_summary(fun = sum, geom = "point") +
-    xlab("Year") + ylab("N. of sentences") +
-    labs(group = "Topics", color = "Topics", shape = "Topics") +
-    theme_minimal() +
-    facet_wrap(vars(adjust_alpha)) +
-    theme(legend.position = "bottom",
-          axis.title.x = element_text(margin = margin(t = 20, r = 0, b = 0, l = 0)),
-          axis.title.y = element_text(margin = margin(t = 0, r = 20, b = 0, l = 0)))
+  stat_summary(fun = sum, geom = "line") +
+  stat_summary(fun = sum, geom = "point") +
+  xlab("Year") + ylab("N. of sentences") +
+  labs(group = "Topics", color = "Topics", shape = "Topics") +
+  theme_minimal() +
+  facet_wrap(vars(type), 
+             labeller = labeller(type = c(symmetric = "Symmetric model", 
+                                          asymmetric = "Asymmetric model"))) +
+  theme(legend.position = "bottom",
+        axis.title.x = element_text(margin = margin(t = 20, r = 0, b = 0, l = 0)),
+        axis.title.y = element_text(margin = margin(t = 0, r = 20, b = 0, l = 0)))
 ```
