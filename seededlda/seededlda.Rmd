@@ -205,7 +205,7 @@ dfmt <- dfm_subset(dfmt_full, docid_ %in% id)
 
 ### Simple LDA
 
-The number of topic is specified by the user via the `k` argument. The maximum number of iteration is set to `max_iter = 500`.
+In simple LDA, the number of topic is specified by the user via the `k` argument. The maximum number of iteration is set to `max_iter = 500`. Its execution time is long despite that down-sampling. Its topics are also unclear. 
 
 ```{r}
 lda <- textmodel_lda(dfmt, k = 8, max_iter = 500, verbose = TRUE)
@@ -214,7 +214,7 @@ terms(lda)
 
 ### Distributed LDA
 
-When `batch_size = 0.01`, the corpus is split into small batches that contain 1% of the documents and distributed across multiple processors. The package uses all the processors unless the users limits the number through `options(seededlda_threads)`. Verbose message shows that the execution time is considerable shorter than Simple LDA.
+When `batch_size = 0.01`, the corpus is split into small batches that contain 1% of the documents and distributed across multiple processors. The package uses all the processors unless the users limits the number through `options(seededlda_threads)`. Verbose message shows that its execution time of distributed LDA is much shorter than simple LDA, but its topics are still unclear.
 
 ```{r}
 lda_dis <- textmodel_lda(dfmt, k = 8, max_iter = 500, batch_size = 0.01, 
@@ -230,7 +230,7 @@ Topics can be pre-defined using **quanteda**'s dictionary object in `textmodel_s
 dict
 ```
 
-`residual` specifies the number of unseeded topics in the model.   
+`residual` specifies the number of unseeded topics in the model. The seeding of topics increase the clarity of topics significantly
 
 ```{r}
 lda_seed <- textmodel_seededlda(dfmt, dict, residual = 2, max_iter = 500, 
@@ -248,18 +248,17 @@ lda_seq <- textmodel_seededlda(dfmt, dict, residual = 2, max_iter = 500,
 terms(lda_seq)
 ```
 
-Thanks to the sequential sampling of topics, the topics change smoothly over sentences, capturing the structures of speeches.
+Thanks to the sequential Gibbs sampling, the topics change smoothly over sentences, capturing the structure of the speech.
 
 ```{r, echo=FALSE}
 tmp <- reshape2::melt(lda_seed$theta[seq(1, 25),1:6], c("docname", "topic"))
 tmp$sentence <- as.integer(stringi::stri_extract_last_regex(tmp$docname, "\\d+"))
-ggplot(tmp, aes(sentence, value, color = topic)) + 
+ggplot(tmp, aes(sentence, value, color = topic, shape = topic)) + 
   geom_line() +
   geom_point() +
   xlab("Sentence ID") + ylab("Probability") +
-  labs(group = "Topics", color = "Topics", shape = "Topics") +
+  labs(color = "Topics", shape = "Topics") +
   theme_minimal() +
-  #facet_wrap(vars(topic)) +
   theme(legend.position = "bottom",
         axis.title.x = element_text(margin = margin(t = 20, r = 0, b = 0, l = 0)),
         axis.title.y = element_text(margin = margin(t = 0, r = 20, b = 0, l = 0)))
@@ -282,7 +281,7 @@ print(lda_asy$alpha)
 ```{r}
 lda_cnv <- textmodel_seededlda(dfmt, dict, residual = 2, auto_iter = TRUE, 
   gamma = 0.5, adjust_alpha = 0.25, batch_size = 0.01, verbose = TRUE)
-terms(lda_cnv)
+print(lda_cnv$last_iter)
 ```
 
 ## Example
@@ -299,8 +298,8 @@ lda_asy <- textmodel_seededlda(dfmt, dict, residual = 2, auto_iter = TRUE,
 The most frequent topic terms of the two models were very similar but ...
 
 ```{r}
-terms(lda_syn)
-terms(lda_asy)
+terms(lda_syn)[,1:3]
+terms(lda_asy)[,1:3]
 ```
 
 ```{r}
